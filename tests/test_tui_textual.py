@@ -158,6 +158,24 @@ def test_builtin_exit_invokes_exit(monkeypatch):
     assert exited == [True]
 
 
+def test_banner_rendered_on_mount():
+    from docgen.tui_app import DocgenTUI
+    from docgen.welcome import LOGO
+
+    async def go():
+        app = DocgenTUI()
+        async with app.run_test(size=(120, 40)):
+            from textual.widgets import RichLog
+
+            return "\n".join(str(line) for line in app.query_one("#main", RichLog).lines)
+
+    out = asyncio.run(go())
+    # The original ASCII logo must appear in the main log on launch.
+    assert "AI Documentation Forge" in out
+    # Logo box-drawing signature lines are present (RichLog stores per-line).
+    assert "╔" in out and "╚" in out and "Documentation Forge" in out
+
+
 def test_bindings_present():
     from docgen.tui_app import DocgenTUI
 

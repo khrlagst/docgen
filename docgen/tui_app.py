@@ -68,6 +68,10 @@ class DocgenTUI(App):
 
     def on_mount(self) -> None:
         self.title = "docgen"
+        # Render the original ASCII banner into the main log on launch.
+        from docgen.welcome import LOGO
+
+        self.query_one("#main", RichLog).write(LOGO)
         self.run_worker(self._populate_commands(), group="ui")
 
     async def _populate_commands(self, filter_text: str = "") -> None:
