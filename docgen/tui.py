@@ -318,7 +318,12 @@ def _cli_main():
         if not is_onboarded() and not run_onboarding(interactive=True):
             sys.exit(1)
 
-        _interactive_loop()
+        if "--legacy-tui" in sys.argv:
+            _interactive_loop()
+        else:
+            from docgen.tui_app import DocgenTUI
+
+            DocgenTUI().run()
     except Exception as e:
         console = Console()
         console.print(f"[yellow]Interactive mode unavailable: {e}[/]")
