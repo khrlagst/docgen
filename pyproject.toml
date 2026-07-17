@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "docgen"
-version = "0.1.0"
+version = "0.2.0"
 description = "AI-powered documentation generator for solo/indie developers"
 readme = "README.md"
 requires-python = ">=3.11"

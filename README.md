@@ -4,7 +4,7 @@
 
 **AI-powered documentation generator for solo/indie developers.**
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/khrlagst/docgen)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/khrlagst/docgen)
 [![Language](https://img.shields.io/badge/language-Python-green.svg)](https://github.com/khrlagst/docgen)
 [![Generated](https://img.shields.io/badge/generated-docgen-8A2BE2)](https://github.com/khrlagst/docgen)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
