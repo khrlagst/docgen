@@ -38,3 +38,6 @@ PLAN_LOCAL_CONCURRENCY.md
 PLAN_TUI.md
 .github/
 .opencode/
+
+# Hermes agent working dir (plans, skills, session notes) — local only
+.hermes/
