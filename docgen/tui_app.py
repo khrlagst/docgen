@@ -80,17 +80,25 @@ class DocgenTUI(App):
     async def _run_command(self, raw: str) -> None:
         from textual.widgets import RichLog
 
+        import docgen.tui as _tui
+
         raw = _normalize_input(raw)
         if not raw:
             return
         log = self.query_one("#main", RichLog)
         log.write(f"[bold cyan]docgen>[/] {raw}")
-        try:
-            # Look up through the module so tests can monkeypatch
-            # `docgen.tui._run_typer_command` without touching this import.
-            import docgen.tui as _tui
 
+        # Redirect all command stdout (incl. rich Console output) into the log.
+        def _sink(text: str) -> None:
+            text = text.rstrip("\n")
+            if text:
+                log.write(text)
+
+        _tui.set_output_sink(_sink)
+        try:
             _tui._run_typer_command(raw)
         except Exception as e:  # keep the UI alive on unexpected errors
             log.write(f"[red]Error:[/] {e}")
+        finally:
+            _tui.set_output_sink(None)
         log.write("[dim]— done —[/]")

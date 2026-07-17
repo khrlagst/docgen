@@ -59,6 +59,39 @@ def test_command_list_no_duplicates_on_refilter():
     assert asyncio.run(go()) > 5
 
 
+def test_output_sink_captures():
+    import docgen.tui as tui
+
+    captured = []
+    tui.set_output_sink(captured.append)
+    try:
+        # `providers` lists the registry with no network/LLM calls.
+        tui._run_typer_command("providers")
+    finally:
+        tui.set_output_sink(None)
+
+    assert captured, "sink should have received output"
+    blob = "".join(captured)
+    assert "deepseek" in blob or "openai" in blob
+
+
+def test_tui_routes_output_to_log():
+    from docgen.tui_app import DocgenTUI
+
+    async def go():
+        app = DocgenTUI()
+        async with app.run_test(size=(120, 40)) as pilot:
+            # `providers` lists the registry; output must land in the log.
+            await app._run_command("providers")
+            await app.workers.wait_for_complete()
+            from textual.widgets import RichLog
+
+            return "\n".join(str(line) for line in app.query_one("#main", RichLog).lines)
+
+    out = asyncio.run(go())
+    assert "deepseek" in out
+
+
 def test_input_submitted_runs_command(monkeypatch):
     from docgen.tui_app import DocgenTUI
     import docgen.tui as tui

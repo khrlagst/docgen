@@ -24,6 +24,34 @@ from docgen.welcome import LOGO
 from docgen.config import CONFIG_KEY_REFERENCE
 from docgen.llm.factory import PROVIDER_REGISTRY
 
+
+# Optional output sink. When set via `set_output_sink`, all stdout produced
+# while running a command (including rich Console() output) is redirected to
+# it, so callers like the Textual TUI can pipe output into a RichLog widget
+# instead of the real terminal.
+_OUTPUT_SINK = None
+
+
+def set_output_sink(sink):
+    """Install or clear an output sink.
+
+    `sink` is a callable accepting a string, or None to restore stdout.
+    """
+    global _OUTPUT_SINK
+    _OUTPUT_SINK = sink
+
+
+class _SinkFile:
+    """File-like wrapper that forwards writes to the active output sink."""
+
+    def write(self, s: str) -> int:
+        if _OUTPUT_SINK is not None:
+            _OUTPUT_SINK(s)
+        return len(s)
+
+    def flush(self) -> None:
+        return None
+
 KNOWN_COMMANDS = set(get_command(app).commands.keys())
 
 # Curated one-line examples for the most-used commands. The *set* of commands
@@ -82,9 +110,16 @@ STYLE = Style.from_dict(
 def _run_typer_command(raw: str):
     """Run a docgen command in-process (no subprocess, so no `python -m docgen`
     leakage in errors) with real terminal I/O."""
+    import contextlib
+
     parts = shlex.split(raw, posix=False)
     try:
-        app(parts, standalone_mode=False, prog_name="docgen")
+        if _OUTPUT_SINK is not None:
+            # Redirect every stdout write (rich Console() included) to the sink.
+            with contextlib.redirect_stdout(_SinkFile()):
+                app(parts, standalone_mode=False, prog_name="docgen")
+        else:
+            app(parts, standalone_mode=False, prog_name="docgen")
     except typer.Exit:
         pass
     except NoArgsIsHelpError:
