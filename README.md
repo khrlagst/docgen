@@ -6,7 +6,7 @@
 
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/khrlagst/docgen)
 [![Language](https://img.shields.io/badge/language-Python-green.svg)](https://github.com/khrlagst/docgen)
-[![Generated](https://img.shields.io/badge/generated-docgen-8A2BE2)](https://github.com/opencode-ai/docgen)
+[![Generated](https://img.shields.io/badge/generated-docgen-8A2BE2)](https://github.com/khrlagst/docgen)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 </div>
@@ -118,15 +118,50 @@ docgen config show
 docgen config set llm.api_key YOUR_KEY
 ```
 
+Unknown keys print a hint suggesting the closest known key (e.g.
+`llm.apikeey` → `llm.api_key`), so typos are easy to catch.
+
+### `docgen html`
+
+Export the generated docs as a single self-contained HTML file (embedded CSS,
+no external dependencies).
+
+```bash
+docgen html docs docs.html
+```
+
+### `docgen site`
+
+Generate an `mkdocs.yml` (Material theme) from the generated docs so you can
+run `mkdocs serve` / `mkdocs build` to publish a static site.
+
+```bash
+docgen site docs _site
+```
+
+### `docgen models` / `docgen providers`
+
+List the model IDs Docgen knows per provider, or list the supported providers.
+
+```bash
+docgen providers
+docgen models --provider gemini
+docgen models --refresh   # fetch live model lists (needs API key / local server)
+```
+
+Docgen supports 10 providers out of the box: OpenAI, Anthropic, Google Gemini,
+Groq, Mistral, Together, Azure OpenAI, DeepSeek, OpenRouter, and local Ollama.
+
 ## Configuration & privacy
 
 - **Per-project config:** When you run a command inside a project, Docgen reads
   `<project>/.docgen/config.toml` (project-local) overlaid on the global
   `~/.config/docgen/config.toml`. `docgen init` writes the project config to
   `.docgen/`, and `docgen config set` writes to the project-local file.
-- **Secrets stay out of version control:** `docgen init` appends `.docgen/` to
-  the project's `.gitignore` (creating it if needed), so a project-local API key
-  is never committed.
+- **Secrets stay out of version control:** both `docgen init` and `docgen config set`
+  append `.docgen/` to the project's `.gitignore` (creating it if needed), so a
+  project-local API key is never committed — even if you set a key *before*
+  running `init`.
 - **Respects `.gitignore`:** Source scanning (`read_source_files`,
   `build_project_tree`, `parse_project`, `summarize_workflows`) skips paths
   excluded by your `.gitignore` as well as common build artifacts
@@ -136,6 +171,11 @@ docgen config set llm.api_key YOUR_KEY
   (`RateLimitError`, timeouts, connection errors) with exponential backoff +
   jitter, honoring a `Retry-After` header when the provider sends one.
   Auth/4xx errors surface immediately with a friendly message.
+- **Local-only preview:** `docgen serve` binds to `127.0.0.1` (loopback) only,
+  so the preview server is never exposed to your local network.
+- **Hermetic PDF export:** WeasyPrint rendering blocks all remote resource
+  fetches (images, CSS), so exporting docs never leaks data or makes outbound
+  network requests.
 
 ## Smart context handling
 
