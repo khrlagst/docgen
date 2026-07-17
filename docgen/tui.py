@@ -52,8 +52,19 @@ class _SinkFile:
     def flush(self) -> None:
         return None
 
-KNOWN_COMMANDS = set(get_command(app).commands.keys())
 
+def _console():
+    """Return a rich Console that writes through the active output sink.
+
+    When a sink is installed (e.g. the Textual TUI), output is redirected to
+    it; otherwise output goes to the real terminal.
+    """
+    if _OUTPUT_SINK is not None:
+        return Console(file=_SinkFile(), soft_wrap=False)
+    return Console()
+
+
+KNOWN_COMMANDS = set(get_command(app).commands.keys())
 # Curated one-line examples for the most-used commands. The *set* of commands
 # and their descriptions is derived from the real Typer app (see `_iter_commands`)
 # so the help listing can never drift out of sync with the actual CLI surface.
@@ -154,7 +165,7 @@ def _normalize_input(text: str) -> str:
 
 def _show_help():
     """Show command help table, derived from the real CLI surface."""
-    console = Console()
+    console = _console()
     table = Table(box=None, show_header=False)
     table.add_column("Command", style="cyan", no_wrap=True)
     table.add_column("Description")
@@ -178,7 +189,7 @@ def _show_command_help(command: str):
     leaking a ``python -m docgen`` subprocess, and the resulting SystemExit is
     swallowed to keep the REPL alive.
     """
-    console = Console()
+    console = _console()
     if not command or command.strip() == "help":
         _show_help()
         return

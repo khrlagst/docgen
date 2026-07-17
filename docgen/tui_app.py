@@ -19,11 +19,24 @@ from textual.widgets import (
     Static,
 )
 
-from docgen.tui import _iter_commands, _normalize_input
+from docgen.tui import (
+    _iter_commands,
+    _normalize_input,
+    _run_typer_command,
+    _show_command_help,
+    _show_help,
+)
+from docgen import __version__
+
 
 class DocgenTUI(App):
     TITLE = "docgen"
     SUB_TITLE = "documentation generator"
+
+    BINDINGS = [
+        ("q", "quit", "Quit"),
+        ("ctrl+l", "clear_log", "Clear"),
+    ]
 
     CSS = """
     #sidebar { width: 30%; border-right: solid $accent; }
@@ -47,6 +60,12 @@ class DocgenTUI(App):
         )
         yield Footer()
 
+    def action_quit(self) -> None:
+        self.exit()
+
+    def action_clear_log(self) -> None:
+        self.query_one("#main", RichLog).clear()
+
     def on_mount(self) -> None:
         self.title = "docgen"
         self.run_worker(self._populate_commands(), group="ui")
@@ -61,9 +80,11 @@ class DocgenTUI(App):
         for name, help_text in _iter_commands():
             if filter_text and filter_text.lower() not in name.lower():
                 continue
-            list_view.append(
-                ListItem(Label(f"[cyan]{name}[/]  [dim]{help_text}[/]"))
-            )
+            item = ListItem(Label(f"[cyan]{name}[/]  [dim]{help_text}[/]"))
+            # Stash the bare command name so selection can prefill the input
+            # without scraping rich renderables (Label has no .renderable).
+            item.command_name = name
+            list_view.append(item)
 
     async def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id == "cmd_filter":
@@ -77,6 +98,16 @@ class DocgenTUI(App):
         # network/LLM calls never block the UI thread.
         self.run_worker(self._run_command(event.value), group="cmd")
 
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        # Fill the input with the chosen command name for quick editing.
+        name = getattr(event.item, "command_name", None)
+        if not name:
+            label = event.item.query_one(Label)
+            name = str(label.renderable).split()[0]
+        inp = self.query_one("#cmd_input", Input)
+        inp.value = name + " "
+        inp.focus()
+
     async def _run_command(self, raw: str) -> None:
         from textual.widgets import RichLog
 
@@ -88,7 +119,8 @@ class DocgenTUI(App):
         log = self.query_one("#main", RichLog)
         log.write(f"[bold cyan]docgen>[/] {raw}")
 
-        # Redirect all command stdout (incl. rich Console output) into the log.
+        # Redirect all command stdout (incl. rich Console output) into the log,
+        # covering both Typer commands and the REPL builtins (help, etc.).
         def _sink(text: str) -> None:
             text = text.rstrip("\n")
             if text:
@@ -96,9 +128,27 @@ class DocgenTUI(App):
 
         _tui.set_output_sink(_sink)
         try:
+            # Builtins handled directly (no Typer dispatch).
+            if raw in ("exit", "quit"):
+                self.exit()
+                return
+            if raw == "clear":
+                log.clear()
+                return
+            if raw == "version":
+                log.write(f"[cyan]docgen[/] v{__version__}")
+                return
+            if raw == "help":
+                _show_help()
+                return
+            if raw.startswith("help "):
+                _show_command_help(raw[5:].strip())
+                return
+
             _tui._run_typer_command(raw)
         except Exception as e:  # keep the UI alive on unexpected errors
             log.write(f"[red]Error:[/] {e}")
         finally:
             _tui.set_output_sink(None)
         log.write("[dim]— done —[/]")
+

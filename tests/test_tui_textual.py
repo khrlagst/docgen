@@ -92,6 +92,105 @@ def test_tui_routes_output_to_log():
     assert "deepseek" in out
 
 
+def test_builtin_help_routing():
+    from docgen.tui_app import DocgenTUI
+
+    async def go():
+        app = DocgenTUI()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await app._run_command("help")
+            await app.workers.wait_for_complete()
+            from textual.widgets import RichLog
+
+            return "\n".join(str(line) for line in app.query_one("#main", RichLog).lines)
+
+    out = asyncio.run(go())
+    # help lists real commands incl. generate
+    assert "generate" in out
+
+
+def test_builtin_version_routing():
+    from docgen.tui_app import DocgenTUI
+    from docgen import __version__
+
+    async def go():
+        app = DocgenTUI()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await app._run_command("version")
+            await app.workers.wait_for_complete()
+            from textual.widgets import RichLog
+
+            return "\n".join(str(line) for line in app.query_one("#main", RichLog).lines)
+
+    out = asyncio.run(go())
+    assert __version__ in out
+
+
+def test_builtin_clear_empties_log():
+    from docgen.tui_app import DocgenTUI
+
+    async def go():
+        app = DocgenTUI()
+        async with app.run_test(size=(120, 40)) as pilot:
+            from textual.widgets import RichLog
+
+            log = app.query_one("#main", RichLog)
+            log.write("something")
+            assert log.lines
+            await app._run_command("clear")
+            return list(log.lines)
+
+    assert asyncio.run(go()) == []
+
+
+def test_builtin_exit_invokes_exit(monkeypatch):
+    from docgen.tui_app import DocgenTUI
+
+    exited = []
+    monkeypatch.setattr(DocgenTUI, "exit", lambda self: exited.append(True))
+
+    async def go():
+        app = DocgenTUI()
+        async with app.run_test(size=(120, 40)):
+            await app._run_command("exit")
+
+    asyncio.run(go())
+    assert exited == [True]
+
+
+def test_bindings_present():
+    from docgen.tui_app import DocgenTUI
+
+    # quit + clear_log actions must exist and be wired via BINDINGS.
+    assert hasattr(DocgenTUI, "action_quit")
+    assert hasattr(DocgenTUI, "action_clear_log")
+    binding_text = " ".join(str(b) for b in DocgenTUI.BINDINGS)
+    assert "quit" in binding_text
+    assert "clear_log" in binding_text
+
+
+def test_sidebar_select_fills_input():
+    from docgen.tui_app import DocgenTUI
+    from textual.widgets import ListView, ListItem, Label, Input
+
+    async def go():
+        app = DocgenTUI()
+        async with app.run_test(size=(120, 40)) as pilot:
+            lv = app.query_one("#cmd_list", ListView)
+            await app._populate_commands()
+            item = lv.children[0]
+            # Simulate selecting the first command item.
+            app.on_list_view_selected(
+                ListView.Selected(item=item, list_view=lv, index=0)
+            )
+            await pilot.pause()
+            return app.query_one("#cmd_input", Input).value
+
+    val = asyncio.run(go())
+    # First command yielded by _iter_commands is "init"; selecting fills input.
+    assert val.startswith("init")
+
+
 def test_input_submitted_runs_command(monkeypatch):
     from docgen.tui_app import DocgenTUI
     import docgen.tui as tui
