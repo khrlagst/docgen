@@ -1,0 +1,46 @@
+<div align="center" markdown="1">
+
+# {{ project_name }}
+
+> {{ description }}
+
+{% if use_shields %}
+[![Version](https://img.shields.io/badge/version-{{ version }}-blue.svg)](https://github.com/{{ project_name | lower | replace(' ', '-') }})
+[![Language](https://img.shields.io/badge/language-{{ language }}-green.svg)](https://github.com/{{ project_name | lower | replace(' ', '-') }})
+{% else %}
+*Version:* {{ version }} · *Language:* {{ language }}
+{% endif %}
+
+</div>
+
+---
+
+## 📦 Installation
+
+```bash
+pip install {{ project_name | lower | replace(' ', '-') }}
+```
+
+## 🚀 Usage
+
+{{ sections.usage }}
+
+## 📚 API
+
+{{ sections.api_reference }}
+
+## 🤝 Contributing
+
+{{ sections.contributing }}
+
+## 📄 License
+
+{{ sections.license }}
+
+---
+
+<div align="center" markdown="1">
+
+*Generated with ❤️ by [docgen](https://github.com/opencode-ai/docgen)*
+
+</div>

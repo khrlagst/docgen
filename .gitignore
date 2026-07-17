@@ -1,0 +1,40 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.env
+
+# docgen (local config with secrets)
+.docgen/
+
+# Nested foreign project generated inside this repo (Excel Formula Trainer).
+# It is a separate project with its own .docgen/ config and docs/ output;
+# it must not be tracked by the docgen repo.
+excel-formula-trainer/
+
+# Generated documentation output
+docs/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Python tooling caches
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local/foreign files not part of the docgen package
+skills/
+AGENTS.md
+PLAN.md
+PLAN_LOCAL_CONCURRENCY.md
+PLAN_TUI.md
+.github/
+.opencode/

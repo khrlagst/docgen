@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "docgen"
+version = "0.1.0"
+description = "AI-powered documentation generator for solo/indie developers"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12.0",
+    "questionary>=2.0.0",
+    "rich>=13.0.0",
+    "openai>=1.0.0",
+    "jinja2>=3.1.0",
+    "GitPython>=3.1.0",
+    "tomli-w>=1.0.0",
+    "pathspec>=0.12.0",
+    "tenacity>=8.2.0",
+    "tiktoken>=0.5.0",
+    "watchdog>=4.0.0",
+    "markdown>=3.5.0",
+]
+
+[project.optional-dependencies]
+pdf = ["weasyprint>=60.0"]
+test = ["pytest>=8.0.0", "pytest-mock>=3.0.0"]
+semantic = ["chromadb>=0.4.0"]
+
+[project.scripts]
+docgen = "docgen.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["docgen"]

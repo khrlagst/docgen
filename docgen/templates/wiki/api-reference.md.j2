@@ -1,0 +1,49 @@
+# 📚 API Reference
+
+{{ sections.api_reference }}
+
+{% if source_modules %}
+---
+
+## 📁 Source Modules
+
+| Module | Classes | Functions |
+|--------|:-------:|:---------:|
+{% for path, info in source_modules.items() %}
+| `{{ path }}` | {{ info.classes | length }} | {{ info.functions | length }} |
+{% endfor %}
+
+{% for path, info in source_modules.items() %}
+---
+
+### `{{ path }}`
+
+{% if info.module_docstring %}
+> {{ info.module_docstring | oneline }}
+{% endif %}
+
+{% if info.classes %}
+**Classes:**
+
+| Class | Description |
+|-------|-------------|
+{% for cls in info.classes %}
+| `{{ cls.name }}` | {{ (cls.docstring or "—") | oneline }} |
+{% endfor %}
+{% endif %}
+
+{% if info.functions %}
+**Functions:**
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+{% for func in info.functions %}
+{% set args = func.args | join(", ") %}
+| `{{ func.name }}` | `({{ args }})` | {{ (func.docstring or "—") | oneline }} |
+{% endfor %}
+{% endif %}
+
+{% endfor %}
+{% endif %}
+
+---

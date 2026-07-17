@@ -1,0 +1,29 @@
+<div align="center" markdown="1">
+
+# {{ project_name }} — User Manual
+
+> **{{ description }}**
+
+</div>
+
+---
+
+## 📑 Manual Contents
+
+{% for section in toc %}
+- [**{{ section.title }}**]({{ section.file }})
+{% endfor %}
+
+---
+
+## 📖 Overview
+
+{{ sections.overview }}
+
+---
+
+<div align="center" markdown="1">
+
+*Generated on {{ generation_date }}*
+
+</div>
