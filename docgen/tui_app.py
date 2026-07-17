@@ -8,10 +8,18 @@ from __future__ import annotations
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Footer, Header, Input, ListView, ListItem, Label, RichLog, Static
+from textual.widgets import (
+    Footer,
+    Header,
+    Input,
+    Label,
+    ListItem,
+    ListView,
+    RichLog,
+    Static,
+)
 
-from docgen.tui import _iter_commands
-
+from docgen.tui import _iter_commands, _normalize_input
 
 class DocgenTUI(App):
     TITLE = "docgen"
@@ -23,6 +31,7 @@ class DocgenTUI(App):
     #cmd_list { height: 1fr; }
     #main { width: 1fr; }
     RichLog { height: 1fr; }
+    #cmd_input { dock: bottom; }
     """
 
     def compose(self) -> ComposeResult:
@@ -32,6 +41,10 @@ class DocgenTUI(App):
                 yield Input(placeholder="filter commands…", id="cmd_filter")
                 yield ListView(id="cmd_list")
             yield RichLog(id="main", markup=True, wrap=True)
+        yield Input(
+            placeholder="docgen> type a command (e.g. generate --source src)",
+            id="cmd_input",
+        )
         yield Footer()
 
     def on_mount(self) -> None:
@@ -55,3 +68,29 @@ class DocgenTUI(App):
     async def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id == "cmd_filter":
             await self._populate_commands(event.value)
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id != "cmd_input":
+            return
+        self.query_one("#cmd_input", Input).value = ""
+        # Normalization + dispatch happens in _run_command; run in a worker so
+        # network/LLM calls never block the UI thread.
+        self.run_worker(self._run_command(event.value), group="cmd")
+
+    async def _run_command(self, raw: str) -> None:
+        from textual.widgets import RichLog
+
+        raw = _normalize_input(raw)
+        if not raw:
+            return
+        log = self.query_one("#main", RichLog)
+        log.write(f"[bold cyan]docgen>[/] {raw}")
+        try:
+            # Look up through the module so tests can monkeypatch
+            # `docgen.tui._run_typer_command` without touching this import.
+            import docgen.tui as _tui
+
+            _tui._run_typer_command(raw)
+        except Exception as e:  # keep the UI alive on unexpected errors
+            log.write(f"[red]Error:[/] {e}")
+        log.write("[dim]— done —[/]")

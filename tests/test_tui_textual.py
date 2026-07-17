@@ -57,3 +57,41 @@ def test_command_list_no_duplicates_on_refilter():
 
     # Re-populating must not accumulate duplicate rows.
     assert asyncio.run(go()) > 5
+
+
+def test_input_submitted_runs_command(monkeypatch):
+    from docgen.tui_app import DocgenTUI
+    import docgen.tui as tui
+
+    captured = []
+
+    def fake_run(raw, sink=None):
+        captured.append(raw)
+
+    monkeypatch.setattr(tui, "_run_typer_command", fake_run)
+
+    async def go():
+        app = DocgenTUI()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await app._run_command("docgen generate --source src")
+            # ensure any scheduled workers finish
+            await app.workers.wait_for_complete()
+
+    asyncio.run(go())
+    assert captured == ["generate --source src"]
+
+
+def test_input_submission_empty_is_ignored(monkeypatch):
+    from docgen.tui_app import DocgenTUI
+    import docgen.tui as tui
+
+    called = []
+    monkeypatch.setattr(tui, "_run_typer_command", lambda raw, sink=None: called.append(raw))
+
+    async def go():
+        app = DocgenTUI()
+        async with app.run_test(size=(120, 40)):
+            await app._run_command("   ")
+
+    asyncio.run(go())
+    assert called == []
