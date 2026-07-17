@@ -702,7 +702,7 @@ def _build_preview_server(docs_dir: Path, port: int):
         def log_message(self, format, *args):
             pass
 
-    server = http.server.ThreadingHTTPServer(("", port), Handler)
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", port), Handler)
     server.daemon_threads = True
     server.allow_reuse_address = True
     return server
@@ -1130,7 +1130,7 @@ def show():
                 full_key = f"{section}.{key}"
                 ref = CONFIG_KEY_REFERENCE.get(full_key)
                 if ref and ref.get("type") == "secret" and value:
-                    value = "****" + value[-4:]
+                    value = value[:4] + "****" + value[-4:]
                 console.print(f"  {key}: [cyan]{value}[/]")
         else:
             console.print(f"  {values}")
@@ -1211,8 +1211,17 @@ def set(
             + ", ".join(CONFIG_KEY_REFERENCE.keys())
         )
 
-    save_config(cfg, project_config_path(Path.cwd()))
-    console.print(f"[green]Set {key} = {target[last_key]}[/]")
+    cfg_write = project_config_path(Path.cwd())
+    save_config(cfg, cfg_write)
+    # A secret (or any project-local value) written here must never be
+    # committed. Ensure the project .gitignore excludes .docgen/ even if the
+    # user set a key before running `docgen init` (which also calls this).
+    ensure_gitignore(Path.cwd())
+    value_repr = target[last_key]
+    ref = CONFIG_KEY_REFERENCE.get(key)
+    if ref and ref.get("type") == "secret" and value_repr:
+        value_repr = "****" + str(value_repr)[-4:]
+    console.print(f"[green]Set {key} = {value_repr}[/]")
 
 
 @config_app.command()
