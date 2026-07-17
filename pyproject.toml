@@ -21,6 +21,7 @@ dependencies = [
     "tiktoken>=0.5.0",
     "watchdog>=4.0.0",
     "markdown>=3.5.0",
+    "textual>=0.80.0",
 ]
 
 [project.optional-dependencies]
