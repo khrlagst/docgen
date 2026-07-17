@@ -61,6 +61,23 @@ def markdown_to_html(md_dir: Path, stylesheet: Path | None = None) -> str:
 </html>"""
 
 
+def _block_remote_fetcher(url: str, *args, **kwargs):
+    """URL fetcher that refuses any network access during PDF rendering.
+
+    Generated docs may contain remote image/CSS references; fetching them would
+    leak data and make builds non-hermetic. We only allow local ``file://`` and
+    ``data:`` URLs (the latter is how inlined stylesheets/CSS are passed).
+    """
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    if parsed.scheme in ("", "file", "data"):
+        from weasyprint.urls import default_url_fetcher
+
+        return default_url_fetcher(url, *args, **kwargs)
+    raise PermissionError(f"Blocked remote resource during PDF export: {url}")
+
+
 def _weasyprint_export(
     md_dir: Path,
     output_pdf: Path,
@@ -100,7 +117,10 @@ def _weasyprint_export(
 </body>
 </html>"""
 
-    HTML(string=full_html).write_pdf(str(output_pdf))
+    # ``url_fetcher`` blocks remote fetches so docs are rendered hermetically.
+    HTML(string=full_html, url_fetcher=_block_remote_fetcher).write_pdf(
+        str(output_pdf)
+    )
 
 
 def _pandoc_export(md_dir: Path, output_pdf: Path):

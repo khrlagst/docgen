@@ -19,18 +19,16 @@ class ContextCollector:
                 read_source_files,
                 parse_project,
                 detect_language,
-                build_project_tree,
-                summarize_workflows,
             )
 
             context["source_files"] = read_source_files(self.source_dir)
             context["source_modules"] = parse_project(self.source_dir)
-            context["project_tree"] = build_project_tree(self.source_dir)
-            context["workflow_summary"] = summarize_workflows(self.source_dir)
+            # project_tree / workflow_summary / cli_surface are expensive to
+            # build (full source-tree walks + AST/CLI analysis). They are
+            # computed lazily on first access via LazyContext so a template that
+            # doesn't need them never pays the cost.
+            context["_source_dir"] = self.source_dir
 
-            from docgen.context.cli_surface import cli_surface_text
-
-            context["cli_surface"] = cli_surface_text(self.source_dir)
             detected = detect_language(self.source_dir, context["source_files"])
             if detected != "Unknown":
                 context["metadata"]["language"] = detected
@@ -61,4 +59,64 @@ class ContextCollector:
         except Exception:
             context["git_info"] = None
 
-        return context
+        return LazyContext(context)
+
+
+class LazyContext:
+    """Read-through wrapper that computes the expensive context fields only
+    when they are first accessed.
+
+    ``build_prompt`` reads ``project_tree``, ``workflow_summary`` and
+    ``cli_surface``; for small projects or templates that don't use them, those
+    walks are skipped entirely. All other keys pass through unchanged.
+    """
+
+    _LAZY_KEYS = ("project_tree", "workflow_summary", "cli_surface")
+
+    def __init__(self, data: dict):
+        object.__setattr__(self, "_data", data)
+        object.__setattr__(self, "_computed", {})
+
+    def __getitem__(self, key):
+        data = object.__getattribute__(self, "_data")
+        if key in self._LAZY_KEYS and key not in data:
+            computed = object.__getattribute__(self, "_computed")
+            if key not in computed:
+                computed[key] = self._build(key)
+            return computed[key]
+        return data[key]
+
+    def __setitem__(self, key, value):
+        object.__getattribute__(self, "_data")[key] = value
+
+    def __contains__(self, key):
+        return key in object.__getattribute__(self, "_data") or key in self._LAZY_KEYS
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def __getattr__(self, name):
+        # Allow normal attribute access to fall back to the wrapped dict.
+        return getattr(object.__getattribute__(self, "_data"), name)
+
+    def _build(self, key: str):
+        data = object.__getattribute__(self, "_data")
+        source_dir = data.get("_source_dir")
+        if source_dir is None:
+            return None
+        if key == "project_tree":
+            from docgen.context.source import build_project_tree
+
+            return build_project_tree(source_dir)
+        if key == "workflow_summary":
+            from docgen.context.source import summarize_workflows
+
+            return summarize_workflows(source_dir)
+        if key == "cli_surface":
+            from docgen.context.cli_surface import cli_surface_text
+
+            return cli_surface_text(source_dir)
+        return None

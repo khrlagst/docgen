@@ -12,7 +12,7 @@ PROJECT_CONFIG_NAME = "config.toml"
 DEFAULT_MODEL_BY_PROVIDER = {
     "openai": "gpt-4o",
     "anthropic": "claude-3-5-sonnet-latest",
-    "gemini": "gemini-flash-latest",
+        "gemini": "gemini-3.5-flash",
     "groq": "llama-3.3-70b-versatile",
     "mistral": "mistral-small-latest",
     "together": "meta-llama/Llama-3.3-70B-Instruct-Turbo",

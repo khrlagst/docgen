@@ -88,12 +88,22 @@ def _warn_if_unknown_model(config: dict) -> None:
 
 # Where a `docgen models --refresh` result is cached (per user, cross-project).
 MODELS_CACHE_PATH = Path("~/.config/docgen/models_cache.json").expanduser()
+# Live model lists drift; don't serve a cache older than this.
+MODELS_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60
 
 
 def _load_cached_models() -> dict:
     try:
         if MODELS_CACHE_PATH.exists():
-            return json.loads(MODELS_CACHE_PATH.read_text(encoding="utf-8"))
+            data = json.loads(MODELS_CACHE_PATH.read_text(encoding="utf-8"))
+            # Ignore a cache entry once its embedded timestamp is past the TTL.
+            saved_at = data.get("__saved_at")
+            if saved_at is not None:
+                import time
+
+                if time.time() - float(saved_at) > MODELS_CACHE_TTL_SECONDS:
+                    return {}
+            return {k: v for k, v in data.items() if k != "__saved_at"}
     except Exception:
         pass
     return {}
@@ -101,8 +111,12 @@ def _load_cached_models() -> dict:
 
 def _save_cached_models(cache: dict) -> None:
     try:
+        import time
+
         MODELS_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        MODELS_CACHE_PATH.write_text(json.dumps(cache, indent=2), encoding="utf-8")
+        payload = dict(cache)
+        payload["__saved_at"] = time.time()
+        MODELS_CACHE_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     except Exception:
         pass
 
@@ -685,8 +699,16 @@ def _build_preview_server(docs_dir: Path, port: int):
                 relative_path = normalized.lstrip("/")
                 if not relative_path.endswith(".md"):
                     relative_path = f"{relative_path}.md"
+                # Only serve known documentation pages. This rejects arbitrary
+                # files (e.g. `refine` .bak backups, dotfiles) that the
+                # SimpleHTTPRequestHandler fallback would otherwise expose.
                 markdown_path = docs_dir / relative_path
-                if markdown_path.exists():
+                if (
+                    markdown_path.exists()
+                    and markdown_path.is_file()
+                    and not relative_path.endswith(".bak")
+                    and not relative_path.startswith(".")
+                ):
                     from docgen.output.markdown import build_markdown_page
 
                     body = build_markdown_page(docs_dir, relative_path).encode("utf-8")
@@ -697,7 +719,7 @@ def _build_preview_server(docs_dir: Path, port: int):
                     self.wfile.write(body)
                     return
 
-            super().do_GET()
+            self.send_error(404, "Not found")
 
         def log_message(self, format, *args):
             pass
@@ -1139,6 +1161,33 @@ def show():
 NUMERIC_KEYS = {"temperature", "timeout", "max_tokens", "port"}
 
 
+def _closest_config_key(key: str) -> str | None:
+    """Return the nearest known config key (by shared prefix) for typo hints."""
+    known = list(CONFIG_KEY_REFERENCE.keys())
+    if not known:
+        return None
+    # Prefer a key that shares the same section (text before the first dot).
+    section = key.split(".", 1)[0]
+    same_section = [k for k in known if k.split(".", 1)[0] == section]
+    pool = same_section or known
+    return min(pool, key=lambda k: _edit_distance(key, k))
+
+
+def _edit_distance(a: str, b: str) -> int:
+    """Levenshtein distance (cheap; config keys are short)."""
+    if a == b:
+        return 0
+    la, lb = len(a), len(b)
+    prev = list(range(lb + 1))
+    for i in range(1, la + 1):
+        cur = [i] + [0] * lb
+        for j in range(1, lb + 1):
+            cost = 0 if a[i - 1] == b[j - 1] else 1
+            cur[j] = min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost)
+        prev = cur
+    return prev[lb]
+
+
 @config_app.command(help=_build_config_set_help())
 def set(
     key: str = typer.Argument(..., help="Config key (e.g. llm.provider)", autocompletion=complete_config_keys),
@@ -1206,8 +1255,11 @@ def set(
             target[last_key] = value.lower() == "true"
         else:
             target[last_key] = value
+        suggestion = _closest_config_key(key)
+        hint = f" Did you mean '{suggestion}'?" if suggestion else ""
         console.print(
-            f"[yellow]Unknown config key '{key}'. Valid keys:[/] "
+            f"[yellow]Unknown config key '{key}'.{hint} "
+            f"Valid keys: [/]"
             + ", ".join(CONFIG_KEY_REFERENCE.keys())
         )
 
