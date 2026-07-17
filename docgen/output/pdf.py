@@ -91,6 +91,8 @@ def _weasyprint_export(
             "Run: pip install docgen[pdf]"
         )
 
+    import markdown as md_lib
+
     pages = _get_pages_in_order(md_dir)
     all_md = [p.read_text(encoding="utf-8") for p in pages]
     combined_md = "\n\n<div style='page-break-before: always;'></div>\n\n".join(all_md)

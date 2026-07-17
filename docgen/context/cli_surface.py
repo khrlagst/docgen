@@ -15,6 +15,8 @@ import ast
 import re
 from pathlib import Path
 
+from docgen.context.gitignore import is_ignored, load_gitignore_spec
+
 
 def find_project_root(path) -> Path | None:
     """Walk up from ``path`` to the nearest directory containing a project manifest."""
@@ -108,9 +110,12 @@ def public_api_symbols(root: Path, limit: int = 40) -> list[str]:
     functions: list[str] = []
     seen: set[str] = set()
 
+    spec = load_gitignore_spec(root)
     for py in sorted(root.rglob("*.py")):
         parts = py.parts
         if any(p.startswith(".") for p in parts):
+            continue
+        if is_ignored(py, root, spec):
             continue
         rel = py.relative_to(root)
         if "tests" in parts:
