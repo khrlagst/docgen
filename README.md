@@ -4,7 +4,7 @@
 
 **AI-powered documentation generator for solo/indie developers.**
 
-[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/khrlagst/docgen)
+[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/khrlagst/docgen)
 [![Language](https://img.shields.io/badge/language-Python-green.svg)](https://github.com/khrlagst/docgen)
 [![Generated](https://img.shields.io/badge/generated-docgen-8A2BE2)](https://github.com/khrlagst/docgen)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -261,6 +261,23 @@ The classic scrolled REPL is still available if needed:
 ```bash
 docgen --legacy-tui
 ```
+
+## Changelog
+
+### 0.3.0
+
+- **Full-screen Textual TUI** — `docgen` (no args) now launches an opencode/Hermes-style
+  full-screen interface: a left command-palette sidebar (live-filterable, sourced from the
+  real CLI surface), a scrolling main log for command output and generation progress, and a
+  bottom input bar. Commands run in-process via a worker so the UI never blocks on LLM calls.
+- Original ASCII banner renders on launch.
+- Builtins: `help`, `help <command>`, `clear`, `version`, `exit`; bindings `q` (quit) and
+  `ctrl+l` (clear); sidebar-select prefills the input.
+- The classic scrolled REPL remains available via `docgen --legacy-tui`.
+
+### 0.2.0
+
+- Language detection, security, and assessment fixes (see git history).
 
 ## Development
 
