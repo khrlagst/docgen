@@ -234,7 +234,33 @@ Run the interactive experience with no command:
 docgen
 ```
 
-This launches a terminal UI with command suggestions and a simple banner.
+This launches a full-screen Textual TUI (opencode/Hermes-style layout):
+
+- **Left sidebar** — a live command palette populated from the real CLI
+  surface. Type in the filter box to narrow it; click/select a command to
+  prefill the input below.
+- **Main panel** — a scrolling log showing command output, generation progress,
+  and token usage.
+- **Bottom input** — type any `docgen` command with its arguments exactly as on
+  the command line (e.g. `generate --source src --template wiki`). Commands run
+  in-process without blocking the UI.
+
+Builtins and key bindings:
+
+| Input / Key      | Action                                  |
+|------------------|-----------------------------------------|
+| `help`           | List all commands                       |
+| `help <command>` | Show that command's options             |
+| `clear`          | Clear the main log                      |
+| `version`        | Print the docgen version                |
+| `exit` / `q`     | Quit                                    |
+| `ctrl+l`         | Clear the main log                      |
+
+The classic scrolled REPL is still available if needed:
+
+```bash
+docgen --legacy-tui
+```
 
 ## Development
 
