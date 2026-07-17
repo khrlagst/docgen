@@ -7,6 +7,7 @@
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/khrlagst/docgen)
 [![Language](https://img.shields.io/badge/language-Python-green.svg)](https://github.com/khrlagst/docgen)
 [![Generated](https://img.shields.io/badge/generated-docgen-8A2BE2)](https://github.com/opencode-ai/docgen)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 </div>
 
