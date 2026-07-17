@@ -2,7 +2,7 @@
 
 # DocGen
 
-> **AI-powered documentation generator for solo/indie developers.**
+**AI-powered documentation generator for solo/indie developers.**
 
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/khrlagst/docgen)
 [![Language](https://img.shields.io/badge/language-Python-green.svg)](https://github.com/khrlagst/docgen)
