@@ -167,6 +167,16 @@ def extract_skeleton(content: str, body_preview_lines: int = 0) -> str:
         return content
 
 
+# Directories that never contain project source and must be skipped during
+# scanning, even when they live inside the source tree (e.g. docgen's own
+# generated `docs/` output, or a nested `site`/build output).
+OUTPUT_DIRS = frozenset({"docs", "site", "_site", "build", "dist"})
+
+
+def _is_output_dir(path: Path) -> bool:
+    return path.name in OUTPUT_DIRS
+
+
 def parse_project(src_dir: Path) -> dict:
     from docgen.context.parsers import parse_source_file
 
@@ -177,6 +187,8 @@ def parse_project(src_dir: Path) -> dict:
         for f in sorted(src_dir.rglob(f"*{ext}")):
             rel_parts = f.relative_to(src_dir).parts
             if any(p.startswith(".") for p in rel_parts):
+                continue
+            if _is_output_dir(f.parent):
                 continue
             if is_ignored(f, src_dir, spec):
                 continue
@@ -224,6 +236,8 @@ def read_source_files(
         for f in sorted(src_dir.rglob(f"*{ext}")):
             rel_parts = f.relative_to(src_dir).parts
             if any(p.startswith(".") for p in rel_parts):
+                continue
+            if _is_output_dir(f.parent):
                 continue
             if is_ignored(f, src_dir, spec):
                 continue
@@ -333,6 +347,8 @@ def build_project_tree(src_dir: Path, max_entries: int = 80) -> str:
             rel = path.relative_to(src_dir)
             if any(part.startswith(".") for part in rel.parts):
                 continue
+            if _is_output_dir(path.parent):
+                continue
             if is_ignored(path, src_dir, spec):
                 continue
             if len(entries) >= max_entries:
@@ -360,6 +376,8 @@ def summarize_workflows(src_dir: Path, max_items: int = 8) -> str:
         for path in sorted(src_dir.rglob(f"*{ext}")):
             rel = path.relative_to(src_dir)
             if any(part.startswith(".") for part in rel.parts):
+                continue
+            if _is_output_dir(path.parent):
                 continue
             if is_ignored(path, src_dir, spec):
                 continue

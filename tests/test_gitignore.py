@@ -79,3 +79,21 @@ def test_parse_project_skips_ignored(project: Path):
     keys = [Path(p).as_posix() for p in modules]
     assert "src/app.py" in keys
     assert all("node_modules" not in k.split("/") for k in keys)
+
+
+def test_gitignore_honoured_from_subdir_source(project: Path):
+    """A ``--source`` sub-directory must still honour the repo-root .gitignore."""
+    sub = project / "src"
+    spec = load_gitignore_spec(sub)
+    assert spec.match_file("node_modules/lib/x.js")
+    assert spec.match_file("dist/bundle.js")
+    # `secret.txt` (no slash) matches at any depth, including repo root
+    assert spec.match_file("secret.txt")
+    assert spec.match_file("src/secret.txt")
+    # and the functions accept the subdir as the project path
+    assert is_ignored(project / "node_modules" / "lib" / "x.js", sub)
+    files = read_source_files(sub, token_budget=10_000_000)
+    keys = [Path(p).as_posix() for p in files]
+    assert "app.py" in keys
+    assert all("node_modules" not in k.split("/") for k in keys)
+    assert all("dist" not in k.split("/") for k in keys)
